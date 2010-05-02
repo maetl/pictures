@@ -54,11 +54,14 @@ class Picture(db.Model):
         self.updated_at = datetime.datetime.today()
         self.put()   
 
-    def get_format(self, format):
+    def get_resized(self, format):
+        """
+        Returns the raw source for the resized image
+        """
         if format == 'thumb':
             return self.thumb
         else:
-            return self.source
+            return self.source           
 
 class ApiHandler(webapp.RequestHandler):
     """
@@ -156,7 +159,7 @@ class PictureResized(webapp.RequestHandler):
         picture = Picture.gql('WHERE name = :1 AND ext = :2', name, ext).get()
         if picture:
             self.response.headers['Content-Type'] = picture.mime_type
-            self.response.out.write(picture.get_format(format))
+            self.response.out.write(picture.get_resized(format))
         else:
             self.error_response(404, 'Picture not found')        
 
@@ -173,7 +176,7 @@ application = webapp.WSGIApplication(
             ('/picture/(.*).(jpg|png|gif)', PictureResource),
             ('/picture/(.*).json', PictureMeta),
             ('/pictures', PicturesCollection),
-            ('/pictures/search', PicturesSearch),
+            ('/pictures/search', PicturesSearch)
 		],
       debug=True)
 
