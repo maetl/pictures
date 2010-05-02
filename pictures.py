@@ -65,17 +65,22 @@ class Picture(db.Model):
             return self.thumb
         else:
             return self.source
-    
+
+    def filename(self):
+        """
+        Full filename string
+        """
+        return self.name + '.' + self.ext
+ 
     def to_obj(self):
         """
         Serializes the picture to an object.
         """
         obj = { 'picture': { } }
         obj['picture']['name'] = self.name
-        filename = self.name + '.' + self.ext
-        obj['picture']['default'] = '/picture/' + filename
-        obj['picture']['thumb'] = '/picture/thumb/' + filename
-        obj['picture']['source'] = '/picture/source' + filename
+        obj['picture']['default'] = '/picture/' + self.filename()
+        obj['picture']['thumb'] = '/picture/thumb/' + self.filename()
+        obj['picture']['source'] = '/picture/source' + self.filename()
         obj['picture']['caption'] = self.caption
         obj['picture']['updated_at'] = self.updated_at.isoformat()
         return obj           
@@ -85,13 +90,13 @@ class ApiHandler(webapp.RequestHandler):
     Base class for handling a RESTful JSON API
     """
     
-    def creation_response(self, name):
+    def success_response(self, status_code, message, name):
         """
         Triggers a "Created" response on successful upload
         """
-        self.response.set_status(201)
+        self.response.set_status(status_code)
         self.response.headers['Content-Type'] = 'text/json'
-        simplejson.dump({'success': { 'status': 201, 'message': 'OK', 'path': '/picture/' + name } }, self.response.out)
+        simplejson.dump({'image': { 'message': message, 'path': '/image/' + name } }, self.response.out)
     
     def error_response(self, status_code, message):
         """
@@ -153,7 +158,7 @@ class PictureResource(ApiHandler):
         picture.caption = self.request.get('caption')
         picture.save()
         
-        self.creation_response(image.name + '.' + image.ext)
+        self.success_response(201, 'Image created', image.name + '.' + image.ext)
         
 class PicturesCollection(ApiHandler):
     """Manages the pictures collection"""
@@ -182,7 +187,7 @@ class PicturesCollection(ApiHandler):
         picture.caption = self.request.get('caption')
         picture.save()
         
-        self.creation_response(picture.name + '.' + picture.ext)
+        self.success_response(201, 'Image created', picture.name + '.' + picture.ext)
 
 class PictureMeta(ApiHandler):
     """
