@@ -64,12 +64,17 @@ class Picture(db.Model):
             return self.source
     
     def to_obj(self):
+        """
+        Serializes the picture to an object.
+        """
         obj = { 'picture': { } }
         obj['picture']['name'] = self.name
         filename = self.name + '.' + self.ext
         obj['picture']['default'] = '/picture/' + filename
         obj['picture']['thumb'] = '/picture/thumb/' + filename
         obj['picture']['source'] = '/picture/source' + filename
+        obj['picture']['caption'] = self.caption
+        obj['picture']['updated_at'] = self.updated_at.isoformat()
         return obj           
 
 class ApiHandler(webapp.RequestHandler):
