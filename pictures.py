@@ -61,7 +61,16 @@ class Picture(db.Model):
         if format == 'thumb':
             return self.thumb
         else:
-            return self.source           
+            return self.source
+    
+    def to_obj(self):
+        obj = { 'picture': { } }
+        obj['picture']['name'] = self.name
+        filename = self.name + '.' + self.ext
+        obj['picture']['default'] = '/picture/' + filename
+        obj['picture']['thumb'] = '/picture/thumb/' + filename
+        obj['picture']['source'] = '/picture/source' + filename
+        return obj           
 
 class ApiHandler(webapp.RequestHandler):
     """
@@ -148,8 +157,13 @@ class PictureMeta(webapp.RequestHandler):
     """
     Display properties of the picture object
     """
-    def get(self, name, format):
-        pass
+    def get(self, name):
+        image = Image.gql('WHERE name = :1', name).get()
+        if image:
+            self.response.headers['Content-Type'] = 'text/json'
+            simplejson.dump(image.to_obj(), self.response.out)
+        else:
+            self.error_response(404, 'Image not found')
 
 class PictureResized(webapp.RequestHandler):
     """
