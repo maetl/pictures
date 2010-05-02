@@ -85,6 +85,7 @@ class Picture(db.Model):
         obj['picture']['updated_at'] = self.updated_at.isoformat()
         return obj           
 
+
 class ApiHandler(webapp.RequestHandler):
     """
     Base class for handling a RESTful JSON API
@@ -117,6 +118,7 @@ class ApiHandler(webapp.RequestHandler):
         Stub method to verify post requests with an API key
         """
         return api_key == PICTURES_API_KEY
+
 
 class PictureResource(ApiHandler):
     """
@@ -159,7 +161,24 @@ class PictureResource(ApiHandler):
         picture.save()
         
         self.success_response(201, 'Picture created', image.name + '.' + image.ext)
+
+    def delete(self, name, ext):
+        """
+        Handle deletion of pictures
+        """
+        if not self.check_api_key(self.request.get('api_key')):
+            self.error_response(401, "Not authorized")
+            return
+
+        picture = Picture.gql('WHERE name = :1 AND ext = :2', name, ext).get()
+        if picture:
+            name = picture.filename()
+            picture.delete()
+            self.success_response(201, 'Picture deleted', name)
+        else:
+            self.error_response(404, 'Picture not found')
         
+
 class PicturesCollection(ApiHandler):
     """
     Manages the pictures collection
@@ -203,6 +222,7 @@ class PicturesCollection(ApiHandler):
         
         self.success_response(201, 'Image created', picture.name + '.' + picture.ext)
 
+
 class PictureMeta(ApiHandler):
     """
     Display properties of the picture object
@@ -214,6 +234,7 @@ class PictureMeta(ApiHandler):
             simplejson.dump(image.to_obj(), self.response.out)
         else:
             self.error_response(404, 'Image not found')
+
 
 class PictureResized(ApiHandler):
     """
@@ -227,12 +248,14 @@ class PictureResized(ApiHandler):
         else:
             self.error_response(404, 'Picture not found')        
 
+
 class PicturesSearch(ApiHandler):
     """
     Search pictures by name
     """
     def get(self):
         pass
+
 
 application = webapp.WSGIApplication(
 		[
