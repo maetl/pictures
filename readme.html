@@ -1,0 +1,201 @@
+<p><em>Small Pieces Loosely Joined</em> – not only is this the philosophy of the Unix system, but also a de-facto motto for the web.
+ It’s hard to ignore the utility and convenience of free-for-small-scale-use cloud hosting like App Engine and Heroku — these
+services are ideal for rapid development, making it easy to split common functions of a content management system into modular, reusable web services.</p>
+
+<p>A good example of this is handling image uploads. Image uploads are essential in many apps, yet for many years, they have been second class citizens in forms and web frameworks. In Rails, you might end up mucking around with extensions like Paperclip or Attachment Fu; and many CMS tools default to a stupid-simple method of saving directly to a single writable directory on the local filesystem. A popular 
+
+<p>In this article, we’ll look at an alternative way of handling image uploads, using App Engine to build a micro-API for processing image data – including resizing, thumbnail creation, and access via a RESTful JSON API. The basic example uses the built-in App Engine data store, but in a production website, it would be better to use this API just as a generator for resizing and forward the images on to a static CDN or dedicated file service such as S3.</p>
+
+<p>When I design web services, I often start by sketching out a map of the features that the API needs to support, using the semantics of a service description table:</p>
+
+<h3>Image Object</h3>
+
+<table>
+	<tr>
+		<td>
+			<code>GET</code>
+		</td>
+		<td>
+			<code>/image/{name}.jpg</code>
+		</td>
+		<td>
+			<code>image/jpeg</code>
+		</td>
+		<td>
+			<p>The default size image object, as a JPEG.</p>
+		</td>
+	</tr>	
+	<tr>
+		<td>
+			<code>POST</code>
+		</td>
+		<td>
+			<code>/image/{name}.jpg</code>
+		</td>
+		<td>
+			<code>text/json</code>
+		</td>
+		<td>
+			<p>Create a new image object</p>
+		</td>
+	</tr>
+	<tr>
+		<td>
+			<code>PUT</code>
+		</td>
+		<td>
+			<code>/image/{name}.jpg</code>
+		</td>
+		<td>
+			<code>text/json</code>
+		</td>
+		<td>
+			<p>Overwrite an existing image object</p>
+		</td>
+	</tr>
+</table>
+
+<p>This is the backbone of the API, which enables storage of image objects via a simple method of sending POST and PUT requests to the specific image URL. We can then go further and add some common size variations:</p>
+
+<h3>Resized Image Object</h3>
+
+<table>
+	<tr>
+		<td>
+			<code>GET</code>
+		</td>
+		<td>
+			<code>/image/original/{name}.jpg</code>
+		</td>
+		<td>
+			<code>image/jpeg</code>
+		</td>
+		<td>
+			<p>The original uploaded image.</p>
+		</td>
+	</tr>
+	<tr>
+		<td>
+			<code>GET</code>
+		</td>
+		<td>
+			<code>/image/thumb/{name}.jpg</code>
+		</td>
+		<td>
+			<code>image/jpeg</code>
+		</td>
+		<td>
+			<p>Thumbnail version of the image.</p>
+		</td>
+	</tr>	
+</table>
+
+<p>This is where you could do anything you want. For example, Flickr processes images into the following formats:</p>
+
+<p>Designers will find this useful when it comes to automating image uploads for a particular grid design – in that case your API would need to support a set of common proportional image sizes that fit to the particular column widths. You’ll then never have to worry about content contributors uploading pictures that break the symmetry of the layout.</p>
+
+<p>Now that we have provided the basic structure for storing and accessing any image, we just need to extend the service to provide clients with a way
+of browsing an index of the image store, and accessing metadata for each image:</p>
+
+<table>
+<tr>
+	<td>
+		<code>GET</code>
+	</td>
+	<td>
+		<code>/image/{name}.json</code>
+	</td>
+	<td>
+		<code>text/json</code>
+	</td>
+	<td>
+		<p>Image properties.</p>
+	</td>
+	<td>
+		<code>GET</code>
+	</td>
+	<td>
+		<code>/images/all</code>
+	</td>
+	<td>
+		<code>text/json</code>
+	</td>
+	<td>
+		<p>All images in the collection.</p>
+	</td>
+	<td>
+		<code>GET</code>
+	</td>
+	<td>
+		<code>/images/search?q={query}</code>
+	</td>
+	<td>
+		<code>text/json</code>
+	</td>
+	<td>
+		<p>Results returned from search for {query}</p>
+	</td>	
+</tr> 
+</table>
+
+<p>Now that we have a map of the service we are building, we can get underway. Create a new app engine project, and configure the app to
+respond to <code>images.py</code>. Using the default (name....) API, create the following routes to turn this web service sketch into
+a working prototype:</p>
+
+<pre class="code">
+
+application = webapp.WSGIApplication(
+		[
+			('/image/(.*).jpg', ImageResource),
+			('/image/(.*).json', ImageMeta),
+			('/image/(original|thumb)/(.*).jpg', ImageResized)
+			('/images/all', ImageCollection),
+			('/images/search', ImageSearch),
+		],
+      debug=True)
+
+</pre>
+
+<p>Now, create the required handler classes that are mapped from these bindings:</p>
+
+<pre class="code">
+
+class ImageResource(webapp.RequestHandler):
+    """Manage the image resource"""
+    def get(self, name, format):
+        pass
+
+class ImageMeta(webapp.RequestHandler):
+    """Display properties of the image object"""
+    def get(self, name, format):
+        pass
+
+class ImageResized(webapp.RequestHandler):
+    """Display source and thumbnail images"""
+    def get(self, size, name, format):
+        pass
+
+class ImagesCollection(webapp.RequestHandler):
+    """Index of all images"""
+    def get(self):
+        pass
+
+class ImagesSearch(webapp.RequestHandler):
+    """Search images by name"""
+    def get(self):
+        pass
+
+</pre>
+
+<p>Next, the model to support blob storage in the App Engine data store. We add the blob fields for the different resized formats and some basic metadata for the image – a caption, and update date.</p>
+	
+	<p>For convenience, we will encapsulate the processing and storage of
+the resized blobs in this object, and provide the resource handler with a single method to add an incoming source image, rather
+than push the handling of multiple size formats into the controller itself:</p>
+
+<pre class="code">
+
+
+
+
+</pre>
