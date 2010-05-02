@@ -80,7 +80,7 @@ class Picture(db.Model):
         obj['picture']['name'] = self.name
         obj['picture']['default'] = '/picture/' + self.filename()
         obj['picture']['thumb'] = '/picture/thumb/' + self.filename()
-        obj['picture']['source'] = '/picture/source' + self.filename()
+        obj['picture']['source'] = '/picture/source/' + self.filename()
         obj['picture']['caption'] = self.caption
         obj['picture']['updated_at'] = self.updated_at.isoformat()
         return obj           
