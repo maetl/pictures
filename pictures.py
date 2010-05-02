@@ -158,10 +158,24 @@ class PictureResource(ApiHandler):
         picture.caption = self.request.get('caption')
         picture.save()
         
-        self.success_response(201, 'Image created', image.name + '.' + image.ext)
+        self.success_response(201, 'Picture created', image.name + '.' + image.ext)
         
 class PicturesCollection(ApiHandler):
-    """Manages the pictures collection"""
+    """
+    Manages the pictures collection
+    """
+    
+    def get(self):
+        """
+        Returns the full index of images
+        """
+        images = Image.all()
+        obj = { 'images': [ ] }
+        for image in images:
+            obj['images'].append(image.to_obj())
+        
+        self.response.headers['Content-Type'] = 'text/json'
+        simplejson.dump(obj, self.response.out)
         
     def post(self):
         """
