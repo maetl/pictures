@@ -7,6 +7,9 @@ from google.appengine.api import pictures
 from google.appengine.ext import db
 from django.utils import simplejson
 
+# replace this
+PICTURES_API_KEY = '8asYFIAd+sfd!ggsdfgASDU#F*S'
+
 class Picture(db.Model):
     """
     Basic picture object
@@ -83,23 +86,42 @@ class ApiHandler(webapp.RequestHandler):
     """
     
     def creation_response(self, name):
+        """
+        Triggers a "Created" response on successful upload
+        """
         self.response.set_status(201)
         self.response.headers['Content-Type'] = 'text/json'
         simplejson.dump({'success': { 'status': 201, 'message': 'OK', 'path': '/picture/' + name } }, self.response.out)
     
     def error_response(self, status_code, message):
+        """
+        Triggers an error response if a problem occurred
+        """
         self.response.set_status(status_code)
         self.response.headers['Content-Type'] = 'text/json'
         simplejson.dump({'error': { 'status': status_code, 'message': message } }, self.response.out)
     
     def validate_picture_type(self, raw):
-        return raw.type in ['picture/jpeg', 'picture/png', 'picture/gif']
+        """
+        Check that uploaded picture is a valid image type
+        """
+        return raw.type in ['image/jpeg', 'image/png', 'image/gif']
+        
+    def check_api_key(self, api_key):
+        """
+        Stub method to verify post requests with an API key
+        """
+        return api_key == PICTURES_API_KEY
 
 class PictureResource(ApiHandler):
     """
     Manage the picture resource
     """
+    
     def get(self, name, ext):
+        """
+        Return the default representation of the picture
+        """
         picture = Picture.gql('WHERE name = :1 AND ext = :2', name, ext).get()
         if picture:
             self.response.headers['Content-Type'] = picture.mime_type
@@ -111,6 +133,10 @@ class PictureResource(ApiHandler):
         """
         Handle RESTful picture creation
         """
+        if not self.check_api_key(self.request.get('api_key')):
+            self.error_response(401, "Not authorized")
+            return
+        
         raw_picture = self.request.get('picture')
         
         if not raw_picture:
@@ -127,19 +153,19 @@ class PictureResource(ApiHandler):
         picture.caption = self.request.get('caption')
         picture.save()
         
-        self.response.set_status(201)
-        self.response.out.write("picture created...")
+        self.creation_response(image.name + '.' + image.ext)
         
 class PicturesCollection(ApiHandler):
     """Manages the pictures collection"""
-    
-    def get(self):
-        pass
         
     def post(self):
         """
         Handle direct post to picture collection
         """
+        if not self.check_api_key(self.request.get('api_key')):
+            self.error_response(401, "Not authorized")
+            return
+        
         uploaded_picture = self.request.get('picture')
         
         if not uploaded_picture:
@@ -158,7 +184,7 @@ class PicturesCollection(ApiHandler):
         
         self.creation_response(picture.name + '.' + picture.ext)
 
-class PictureMeta(webapp.RequestHandler):
+class PictureMeta(ApiHandler):
     """
     Display properties of the picture object
     """
@@ -170,7 +196,7 @@ class PictureMeta(webapp.RequestHandler):
         else:
             self.error_response(404, 'Image not found')
 
-class PictureResized(webapp.RequestHandler):
+class PictureResized(ApiHandler):
     """
     Display source and thumbnail pictures
     """
@@ -182,7 +208,7 @@ class PictureResized(webapp.RequestHandler):
         else:
             self.error_response(404, 'Picture not found')        
 
-class PicturesSearch(webapp.RequestHandler):
+class PicturesSearch(ApiHandler):
     """
     Search pictures by name
     """
@@ -192,7 +218,7 @@ class PicturesSearch(webapp.RequestHandler):
 application = webapp.WSGIApplication(
 		[
 		    ('/picture/(source|thumb)/(.*).(jpg|png|gif)', PictureResized),
-            ('/picture/(.*).(jpg|png|gif)', PictureResource),
+		    ('/picture/(.*).(jpg|png|gif)', PictureResource),
             ('/picture/(.*).json', PictureMeta),
             ('/pictures', PicturesCollection),
             ('/pictures/search', PicturesSearch)
