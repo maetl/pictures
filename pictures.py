@@ -83,7 +83,7 @@ class Picture(db.Model):
         obj['picture']['source'] = '/picture/source/' + self.filename()
         obj['picture']['caption'] = self.caption
         obj['picture']['updated_at'] = self.updated_at.isoformat()
-        return obj           
+        return obj
 
 
 class ApiHandler(webapp.RequestHandler):
@@ -97,7 +97,7 @@ class ApiHandler(webapp.RequestHandler):
         """
         self.response.set_status(status_code)
         self.response.headers['Content-Type'] = 'text/json'
-        simplejson.dump({'image': { 'message': message, 'path': '/image/' + name } }, self.response.out)
+        simplejson.dump({'image': { 'message': message, 'name': name } }, self.response.out)
     
     def error_response(self, status_code, message):
         """
