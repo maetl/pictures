@@ -70,7 +70,7 @@ class Picture(db.Model):
         """
         Full filename string
         """
-        return self.name + '.' + self.ext
+        return str(self.name) + '.' + str(self.ext)
  
     def to_obj(self):
         """
