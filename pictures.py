@@ -1,16 +1,38 @@
-"""
+#
+# Copyright 2010 Mark Rickerby <http://maetl.net>
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# 
+# The Google App Engine API is Copyright 2007 Google Inc and is available
+# under the Google App Engine terms of service: 
+#
+#     http://code.google.com/appengine/terms.html
+#
+# For more details, see http://maetl.net/forthcoming-blog-post
+#
 
-.::.            .       .:;P;:. .:;.;:.         .: P;:. 
-P  P    .:;p;:' P:;p;:'       P P  P    P  P  P P  P  P 
-`:;P;:'         `       `:;P;:' `:;P;:' `:;P;:' `:;P :'
+__author__ = "Mark Rickerby"
 
-
-A Simple App Engine Picture API
- 
-Google App Engine APIs are licensed under the Google App Engine
-terms of service: http://code.google.com/appengine/terms.html
-
-"""
+#?replace-this=
+PICTURES_API_KEY = '8asYFIAd+sfd!ggsdfgASDU#F*S'
+API_ERROR_UNAUTHORIZED = 'Unauthorized'
+API_ERROR_MISSING = 'Missing picture'
+API_ERROR_INVALID = 'Picture must be one of .gif, .png or .jpg'
+API_PICTURE_CREATED = 'Picture created'
+API_PICTURE_UPDATED = 'Picture updated'
+API_ERROR_NOT_SAVED = 'Picture not saved'
+API_ERROR_EXISTS = 'Picture already exists'
+API_PICTURE_DELETED = 'Picture deleted'
 
 import os
 import datetime
@@ -21,18 +43,6 @@ from google.appengine.api import pictures
 from google.appengine.ext import db
 from django.utils import simplejson
 
-#?replace-this=
-PICTURES_API_KEY = '8asYFIAd+sfd!ggsdfgASDU#F*S'
-
-#?response-messages=
-API_ERROR_UNAUTHORIZED = 'Unauthorized'
-API_ERROR_MISSING = 'Missing picture'
-API_ERROR_INVALID = 'Picture must be one of .gif, .png or .jpg'
-API_PICTURE_CREATED = 'Picture created'
-API_PICTURE_UPDATED = 'Picture updated'
-API_ERROR_NOT_SAVED = 'Picture not saved'
-API_ERROR_EXISTS = 'Picture already exists'
-API_PICTURE_DELETED = 'Picture deleted'
 
 class Picture(db.Model):
     """
