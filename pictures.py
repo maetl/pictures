@@ -133,13 +133,14 @@ class Picture(db.Model):
         """
         Serializes the picture to an object.
         """
-        obj = { 'picture': { } }
-        obj['picture']['name'] = self.name
-        obj['picture']['default'] = '/picture/' + self.filename()
-        obj['picture']['thumb'] = '/picture/thumb/' + self.filename()
-        obj['picture']['source'] = '/picture/source/' + self.filename()
-        obj['picture']['caption'] = self.caption
-        obj['picture']['updated_at'] = self.updated_at.isoformat()
+        obj = { 'picture': { 
+                'name': self.name,
+                'default': '/picture/' + self.filename(),
+                'thumb': '/picture/thumb/' + self.filename(),
+                'source': '/picture/source/' + self.filename(),
+                'caption': self.caption,
+                'updated_at': self.updated_at.isoformat()
+            } }
         return obj
 
 
@@ -190,7 +191,7 @@ class ApiHandler(webapp.RequestHandler):
     
     def check_api_key(self):
         """
-        Trigger an unauthorized error if API key is not provided
+        Return false if API key is not provided
         """
         return self.request.get('api_key') == API_KEY
 
