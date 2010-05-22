@@ -74,7 +74,8 @@ class Picture(db.Model):
         Encodes filename into URI friendly format.
         """
         if not name:
-            filename_part = raw_picture.filename.split('.')
+            basename = os.part.basename(raw_picture.filename)
+            filename_part = basename.split('.')
             filename_part.pop()
             name = ''.join(filename_part)
         
