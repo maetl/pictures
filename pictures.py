@@ -266,7 +266,7 @@ class PictureMeta(ApiHandler):
     """
     def get(self, name):
         picture = Picture.find(name)
-        if image:
+        if picture:
             self.response.headers['Content-Type'] = 'text/json'
             simplejson.dump(picture.to_obj(), self.response.out)
         else:
