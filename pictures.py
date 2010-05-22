@@ -74,7 +74,7 @@ class Picture(db.Model):
         Encodes filename into URI friendly format.
         """
         if not name:
-            basename = os.part.basename(raw_picture.filename)
+            basename = os.path.basename(raw_picture.filename)
             filename_part = basename.split('.')
             filename_part.pop()
             name = ''.join(filename_part)
@@ -104,7 +104,11 @@ class Picture(db.Model):
         Set default timestamp on save
         """
         self.updated_at = datetime.datetime.today()
-        self.put()
+        try:
+            self.put()
+            return True
+        except db.Error:
+            return False
 
     def filename(self):
         """
@@ -170,7 +174,7 @@ class ApiHandler(webapp.RequestHandler):
         """
         Generic handler for processing picture uploads
         """
-        if not self.check_api_key(self.request.get('api_key')):
+        if not self.check_api_key():
             self.error_response(401, API_ERROR_UNAUTHORIZED)
             return False
         
@@ -184,11 +188,11 @@ class ApiHandler(webapp.RequestHandler):
             
         return True
     
-    def check_api_key(self, api_key):
+    def check_api_key(self):
         """
-        Stub method to verify post requests with an API key
+        Trigger an unauthorized error if API key is not provided
         """
-        return api_key == PICTURES_API_KEY
+        return self.request.get('api_key') == PICTURES_API_KEY
 
 
 class PictureResource(ApiHandler):
@@ -229,9 +233,7 @@ class PictureResource(ApiHandler):
         """
         Update an existing picture.
         """
-        raw_picture = self.request.POST['picture']
-        
-        if not self.validate_uploaded_picture(raw_picture):
+        if not self.check_uploaded_picture():
             return
             
         picture = Picture.find(name, ext)
@@ -248,9 +250,9 @@ class PictureResource(ApiHandler):
         """
         Handle deletion of pictures
         """
-        if not self.check_api_key(self.request.get('api_key')):
-            self.error_response(401, API_ERROR_UNAUTHORIZED)
-            return
+        #if not self.check_api_key():
+        #    self.error_response(401, API_ERROR_UNAUTHORIZED)
+        #    return
 
         picture = Picture.find(name, ext)
         if picture:
@@ -305,14 +307,11 @@ class PicturesCollection(ApiHandler):
         """
         Handle direct post to picture collection
         """
-        raw_picture = self.request.POST['picture']
-        
-        if not self.check_uploaded_picture(raw_picture):
+        if not self.check_uploaded_picture():
             return
         
         picture = Picture()
-        picture.encode_name(raw_picture)
-        picture.encode_source(raw_picture)
+        picture.encode(self.request.POST['picture'])
         picture.caption = self.request.get('caption')
         
         if not picture.save():

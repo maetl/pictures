@@ -51,13 +51,24 @@ class TestPicturesService(unittest.TestCase):
     def testPostToPictureResource(self):
         data, headers = multipart_encode({'picture': open('assets/disco-boogie.jpg', 'rb'), 'api_key': API_KEY, 'caption': 'a caption...'})
         request = urllib2.Request(TEST_HOST + '/picture/' + self.getRandomFilename(), data, headers)
-        
-        # valid upload should return 201
         try:
             response = urllib2.urlopen(request)
         except urllib2.HTTPError, e:
             self.assertEquals(201, e.code)
-        
+            
+    def testPostToPictureCollection(self):
+        data, headers = multipart_encode({'picture': open('assets/disco-boogie.jpg', 'rb'), 'api_key': API_KEY, 'caption': 'a caption...'})
+        request = urllib2.Request(TEST_HOST + '/pictures', data, headers)
+        try:
+            response = urllib2.urlopen(request)
+        except urllib2.HTTPError, e:
+            self.assertEquals(201, e.code)        
+
+    def testDeletePictureResource(self):
+        http = httplib2.Http()
+        params = urllib.urlencode({'api_key': API_KEY})
+        response, content = http.request(TEST_HOST + '/picture/disco-boogie.jpg?' + params, 'DELETE')
+        self.assertEquals(201, response.status)        
         
 if __name__ == "__main__":
     unittest.main()
