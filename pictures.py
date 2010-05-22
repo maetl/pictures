@@ -24,7 +24,7 @@
 __author__ = "Mark Rickerby"
 
 #?replace-this=
-PICTURES_API_KEY = '8asYFIAd+sfd!ggsdfgASDU#F*S'
+API_KEY = '8asYFIAd+sfd!ggsdfgASDU#F*S'
 API_ERROR_UNAUTHORIZED = 'Unauthorized'
 API_ERROR_MISSING = 'Missing picture'
 API_ERROR_INVALID = 'Picture must be one of .gif, .png or .jpg'
@@ -192,7 +192,7 @@ class ApiHandler(webapp.RequestHandler):
         """
         Trigger an unauthorized error if API key is not provided
         """
-        return self.request.get('api_key') == PICTURES_API_KEY
+        return self.request.get('api_key') == API_KEY
 
 
 class PictureResource(ApiHandler):
