@@ -1,12 +1,11 @@
-<p>It&rsquo;s hard to ignore the utility and convenience of free-for-small-scale-use cloud hosting like App Engine and Heroku &mdash; these services are ideal for rapid development, making it easy to split common functions of a content management system into modular, reusable web services.</p>
+<p>It&rsquo;s hard to ignore the utility and convenience of free-for-small-scale-use cloud hosting like <a href="http://code.google.com/appengine/">Google App Engine</a> and <a href="http://heroku.com">Heroku</a> &mdash; these services are ideal for rapid development, making it easy to split common functions of a web application into distributed web services.</p>
 <p>
-	A good example of this is handling image uploads. Image uploads are essential in many apps, yet for many years, they have been second class citizens in forms and web frameworks. In Rails, you might end up mucking around with extensions like Paperclip or Attachment Fu; and many CMS tools default to a stupid-simple method of saving directly to a single writable directory on the local filesystem. A popular</p>
+	A good example of where this is handling image uploads. Image uploads are essential in many apps, yet for many years, they have been second class citizens in forms and web frameworks. In Rails, you might end up mucking around with extensions like Paperclip or Attachment Fu; and many CMS tools default to a stupid-simple method of saving directly to a single writable directory on the local filesystem. A popular</p>
 <p>
 	In this article, we&rsquo;ll look at an alternative way of handling image uploads, using App Engine to build a micro-API for processing image data &ndash; including resizing, thumbnail creation, and indexing via a JSON API. The basic example uses the built-in App Engine data store, but in a production website, it would be better to use just as a generator for resizing and forwarding the images on to a static CDN or dedicated file service such as S3.</p>
 <p>
 	When I design web services, I often start by sketching out a map of the features that the API needs to support, using the semantics of a service description table:</p>
-<h3>
-	Picture Object</h3>
+<h3>Picture Object</h3>
 <table>
 	<tbody>
 		<tr>
@@ -20,6 +19,8 @@
 				<p>
 					The default size picture, as a JPEG.</p>
 			</td>
+			<td>
+			</td>
 		</tr>
 		<tr>
 			<td>
@@ -32,6 +33,8 @@
 				<p>
 					Create a new picture</p>
 			</td>
+			<td>API key required
+			</td>
 		</tr>
 		<tr>
 			<td>
@@ -43,6 +46,22 @@
 			<td>
 				<p>
 					Overwrite an existing picture</p>
+			</td>
+			<td>API key required
+			</td>
+		</tr>
+		<tr>
+			<td>
+				<code>DELETE</code></td>
+			<td>
+				<code>/picture/{name}.{ext}</code></td>
+			<td>
+				<code>text/json</code></td>
+			<td>
+				<p>
+					Remove an existing picture</p>
+			</td>
+			<td>API key required
 			</td>
 		</tr>
 	</tbody>
@@ -94,24 +113,24 @@
 			<td>
 				<code>GET</code></td>
 			<td>
-				<code>/picture/{name}.json</code></td>
+				<code>/picture/{name}</code></td>
 			<td>
 				<code>text/json</code></td>
 			<td>
 				<p>
-					Picture properties.</p>
+					Picture metadata</p>
 			</td>
 		</tr>
 		<tr>
 			<td>
 				<code>GET</code></td>
 			<td>
-				<code>/pictures/all</code></td>
+				<code>/pictures</code></td>
 			<td>
 				<code>text/json</code></td>
 			<td>
 				<p>
-					All pictures in the collection.</p>
+					All pictures in the collection</p>
 			</td>
 		</tr>
 		<tr>
@@ -129,128 +148,60 @@
 	</tbody>
 </table>
 <p>
-	Now that we have a map of the service we are building, we can get it running extraordinarily quickly. Create a new app engine project, and configure the app to respond to <code>pictures.py</code>:
-	
-<h3>The Web App</h3>	
-	
-	<p>Using the default (name....) API, create the following routes to turn this web service sketch into a working prototype:</p>
-	
-<pre class="code">
-application = webapp.WSGIApplication(
-		[
-			(&#39;/picture/(.*).jpg&#39;, PictureResource),
-			(&#39;/picture/(.*).json&#39;, PictureMeta),
-			(&#39;/picture/(original|thumb)/(.*).jpg&#39;, PictureResized)
-			(&#39;/pictures/all&#39;, PicturesCollection),
-			(&#39;/pictures/search&#39;, PicturesSearch),
-		],
-      debug=True)
-
-</pre>
-<p>This binds to the required handler classes to implement the service. As we will see further on, an important question is where to handle the post method for creating new pictures:</p>
-<pre class="code">
-class PictureResource(webapp.RequestHandler):
-    def get(self, name, ext):
-        pass
-
-	def post(self, name, ext):
-	    pass
-	
-	def put(self, name, ext):
-		pass
-
-class PictureMeta(webapp.RequestHandler):
-    def get(self, name, ext):
-        pass
-
-class PicturesResized(webapp.RequestHandler):
-    def get(self, size, name, ext):
-        pass
-
-class PicturesCollection(webapp.RequestHandler):
-    def get(self):
-        pass
-
-class PicturesSearch(webapp.RequestHandler):
-    def get(self):
-        pass
-
-</pre>
+	Now that we have a map of the service we are building, we can get it running extraordinarily quickly. Create a new app engine project, and configure the app to respond to <code>pictures.py</code>:</p>
 
 <h3>The Model</h3>
 
 <p>
-	Next, the model to support blob storage in the App Engine data store. We add the blob fields for the different resized formats and some basic metadata for the image &ndash; a caption, and update date.</p>
+	First, the model to support blob storage in the App Engine data store. We add the blob fields for the different resized formats and some basic metadata for the image &ndash; a caption, and update date.</p>
 	
 <pre class="code">
 class Picture(db.Model):
-    """
-    Basic picture object
-    """
-    name = db.StringProperty()
-    ext = db.StringProperty()
-    mime_type = db.StringProperty()
-    source = db.BlobProperty()
-    thumb = db.BlobProperty()
-    default = db.BlobProperty()
-    caption = db.StringProperty()
-    updated_at = db.DateTimeProperty()
+  name       =  db.StringProperty()
+  ext        =  db.StringProperty()
+  mime_type  =  db.StringProperty()
+  source     =  db.BlobProperty()
+  thumb      =  db.BlobProperty()
+  default    =  db.BlobProperty()
+  caption    =  db.StringProperty()
+  updated_at =  db.DateTimeProperty()
 </pre>	
 
 <p>
-	For convenience, we will encapsulate the processing and storage of the resized blobs in this object, and provide the resource handler with a single method to add an incoming source image, rather than push the handling of multiple size formats into the controller itself:</p>
+	For convenience, we will encapsulate the processing and storage of the resized blobs in this object, and provide the resource handler with a single method to add an incoming source image, rather than push the handling of multiple size formats into the controller itself. Resizing is handled with calls into the <a href="http://code.google.com/appengine/docs/python/images/imageclass.html#Image_resize">App Engine Image API</a>. If a height value is not provided, the <code>images.resize</code> method calculates this based on the given width and existing aspect ratio.</p>
 <pre class="code">
 class Picture(db.Model):
-  def encode_source(self, raw):
-    """
-    Wraps the creation of resized picture blobs from uploaded data
-    """
-    self.mime_type = raw.type
-    self.source = db.Blob(raw.value)
-    
-    self.thumb = pictures.resize(raw.value, 120, 90)
-    self.default = pictures.resize(raw.value, 360)
+  def encode(self, raw_picture, name=False, ext=False):
+    self.encode_name(raw_picture, name, ext)
 
-   def save(self):
-     """
-     Set default timestamp on save. Wrap other custom creation logic here.
-     """
-     self.updated_at = datetime.datetime.today()
-     self.put()
+    self.mime_type = raw_picture.type
+    self.source = db.Blob(raw_picture.value)
+
+    self.thumb = images.resize(raw_picture.value, 120, 90)
+    self.default = images.resize(raw_picture.value, 360)
 </pre>
 
-<p>The app also needs to support normalizing name strings for the pictures to be encoded as URLS. This could be done in a variety of
+<p>The app also needs to support normalizing name strings for the pictures to be encoded in URL paths. This could be done in a variety of
 	ways depending on the design of the URL structures in the app. The encoded name is used to split the file part into a name and
 	a file extension, and store them as separate properties on the object. If no name is provided, the filename is guessed
 	from the incoming input.</p>
 	
 <pre class="code">
 class Picture(db.Model):
-    def encode_name(self, raw, name=False, ext=False):
-        if not name:
-            filename_part = raw.filename.split('.')
-            filename_part.pop()
-            name = ''.join(filename_part)
-        
-        encoded_name = name.lower().replace(' ', '-').replace('_', '-')
-        self.name = encoded_name
-            
-        if not ext:
-            ext = raw.type.split('/')[1]
-        
-        self.ext = ext
-</pre>
-
-<p>Resizing is handled with calls into the <a href="http://code.google.com/appengine/docs/python/images/imageclass.html#Image_resize">App Engine Image API</a>, wrapped in <code>encode_source</code>:</p>
-
-<pre class="code">
-class Picture(db.Model):
-	def encode_source(self, raw):
-        self.mime_type = raw.type
-        self.source = db.Blob(raw.value)
-        
-        self.thumb = pictures.resize(raw.value, 120, 90)
-        self.default = pictures.resize(raw.value, 360)
+  def encode_name(self, raw_picture, name=False, ext=False):
+    if not name:
+      basename = os.path.basename(raw_picture.filename)
+      filename_part = basename.split('.')
+      filename_part.pop()
+      name = ''.join(filename_part)
+  
+    encoded_name = name.lower().replace(' ', '-').replace('_', '-')
+    self.name = encoded_name
+      
+    if not ext:
+      ext = raw_picture.type.split('/')[1].replace('jpeg', 'jpg')
+  
+    self.ext = ext
 </pre>
 
 <p>And also convenience method for serializing the object.</p>
@@ -266,47 +217,43 @@ class Picture(db.Model):
         obj['picture']['caption'] = self.caption
         obj['picture']['updated_at'] = self.updated_at.isoformat()
         return obj
+</pre>
 
-<h3>JSON Handler</h3>
+<h3>The Web App</h3>	
 
-<p>To make it easier to implement the picture interface for the web, make a simple base class for the JSON handlers that respond
-	to HTTP requests:</p>
+	<p>Using the default WSGI Application API, create the following routes to turn this web service sketch into a working prototype:</p>
+
+<pre class="code">
+application = webapp.WSGIApplication(
+  [
+	(&#39;/picture/(.*).jpg&#39;, PictureResource),
+	(&#39;/picture/(.*).json&#39;, PictureMeta),
+	(&#39;/picture/(original|thumb)/(.*).jpg&#39;, PictureResized)
+	(&#39;/pictures&#39;, PicturesCollection),
+	(&#39;/pictures/search&#39;, PicturesSearch),
+  ], 
+  debug=True)
+</pre>
+<p>This binds to the required handler classes to implement the full URL service map. A stub implementation to respond to HTTP requests on these routes looks like:</p>
+
+<p>To make it easier to implement handlers that respond to HTTP requests, make a base class for handling common JSON responses
+	and checking the API key:</p>
 
 <pre class="code">	
 class ApiHandler(webapp.RequestHandler):
-    """
-    Base class for handling requests
-    """
 
-    def success_response(self, status_code, message, name):
-        """
-        Triggers a "Created" response on successful upload
-        """
-        self.response.set_status(status_code)
-        self.response.headers['Content-Type'] = 'text/json'
-        simplejson.dump({'image': { 'message': message, 'name': name } }, self.response.out)
+  def success_response(self, status_code, message, name):
+    self.response.set_status(status_code)
+    self.response.headers['Content-Type'] = 'text/json'
+    simplejson.dump({'success': { 'message': message, 'resource': '/picture/' + name } }, self.response.out)
 
-    def error_response(self, status_code, message):
-        """
-        Triggers an error response if a problem occurred
-        """
-        self.response.set_status(status_code)
-        self.response.headers['Content-Type'] = 'text/json'
-        simplejson.dump({'error': { 'status': status_code, 'message': message } }, self.response.out)
+  def error_response(self, status_code, message):
+    self.response.set_status(status_code)
+    self.response.headers['Content-Type'] = 'text/json'
+    simplejson.dump({'error': { 'status': status_code, 'message': message } }, self.response.out)
 
-    def validate_picture_type(self, raw):
-        """
-        Check that uploaded picture is a valid image type
-        """
-        return raw.type in ['image/jpeg', 'image/png', 'image/gif']
-
-    def check_api_key(self, api_key):
-        """
-        Stub method to verify post requests with an API key. Replace this with whatever
-		authentication check is needed.
-        """
-        return api_key == PICTURES_API_KEY
-
+  def check_api_key(self):
+    return self.request.get('api_key') == API_KEY
 </pre>
 
 <h3>Post Requests</h3>
