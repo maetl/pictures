@@ -50,11 +50,10 @@ class Picture(db.Model):
     @classmethod
     def find(self, name, ext=False):
         """
-        Find a single picture with given parameters
+        Find a single picture by name and file extension
         """
         query = self.all()
-        if name:
-            query.filter('name =', name)
+        query.filter('name =', name)
         if ext:
             query.filter('ext =', ext)
         
