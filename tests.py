@@ -15,10 +15,15 @@
 # limitations under the License.
 
 import unittest
+from poster.encode import multipart_encode
+from poster.streaminghttp import register_openers
 import urllib
 import urllib2
 
 TEST_HOST = 'http://localhost:8084'
+API_KEY = '8asYFIAd+sfd!ggsdfgASDU#F*S'
+
+register_openers()
 
 class TestPicturesService(unittest.TestCase):
     
@@ -29,10 +34,11 @@ class TestPicturesService(unittest.TestCase):
             self.assertEquals(404, e.code)
     
     def testSingularPictureResource(self):
-        data = { 'caption': 'this is a picture caption', 'file': open('assets/disco-boogie.jpg') }
-        body = urllib.urlencode(data)
+        data, headers = multipart_encode({'picture': open('assets/disco-boogie.jpg', 'rb'), 'api_key': API_KEY, 'caption': 'a caption...'})
+        request = urllib2.Request(TEST_HOST + '/picture/picture01.jpg', data, headers)
         try:
-            response = urllib2.urlopen(TEST_HOST + '/picture/my-picture.jpg', body)
+            response = urllib2.urlopen(request)
+            print response.info()
         except urllib2.HTTPError, e:
             print e.read()
         
