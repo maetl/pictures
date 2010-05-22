@@ -19,6 +19,8 @@ from poster.encode import multipart_encode
 from poster.streaminghttp import register_openers
 import urllib
 import urllib2
+import httplib2
+import random
 
 TEST_HOST = 'http://localhost:8084'
 API_KEY = '8asYFIAd+sfd!ggsdfgASDU#F*S'
@@ -27,22 +29,34 @@ register_openers()
 
 class TestPicturesService(unittest.TestCase):
     
-    def testMissingPictureThrows404(self):
-        try:
-            response = urllib2.urlopen(TEST_HOST + '/picture/missing.jpg')
-        except urllib2.HTTPError, e:
-            self.assertEquals(404, e.code)
+    def getRandomFilename(self):
+        return str(random.randrange(999, 9999999)) + '.jpg'
     
-    def testSingularPictureResource(self):
+    def testMissingPictureThrowsError(self):
+        http = httplib2.Http()
+        response, content = http.request(TEST_HOST + '/picture/missing.jpg', 'GET')
+        self.assertEquals(404, response.status)
+    
+    def testNoApiKeyOnPostThrowsError(self):
+        http = httplib2.Http()
+        response, content = http.request(TEST_HOST + '/picture/test.jpg', 'POST')
+        self.assertEquals(401, response.status)
+        
+    def testMissingPictureOnPostThrowsError(self):
+        http = httplib2.Http()
+        params = urllib.urlencode({'api_key': API_KEY})
+        response, content = http.request(TEST_HOST + '/picture/test.jpg', 'POST', params)
+        self.assertEquals(400, response.status)
+    
+    def testPostToPictureResource(self):
         data, headers = multipart_encode({'picture': open('assets/disco-boogie.jpg', 'rb'), 'api_key': API_KEY, 'caption': 'a caption...'})
-        request = urllib2.Request(TEST_HOST + '/picture/picture01.jpg', data, headers)
+        request = urllib2.Request(TEST_HOST + '/picture/' + self.getRandomFilename(), data, headers)
+        
+        # valid upload should return 201
         try:
             response = urllib2.urlopen(request)
-            print response.info()
         except urllib2.HTTPError, e:
-            print e.read()
-        
-        
+            self.assertEquals(201, e.code)
         
         
 if __name__ == "__main__":
