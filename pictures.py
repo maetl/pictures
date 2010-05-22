@@ -208,7 +208,9 @@ class PictureResource(ApiHandler):
         """
         Handle resource based picture creation to /pictures/{name}.{ext}
         """
-        if not self.validate_uploaded_picture():
+        raw_picture = self.request.POST['picture']
+        
+        if not self.check_uploaded_picture(raw_picture):
             return
         
         picture = Picture.find(name, ext)
@@ -216,7 +218,7 @@ class PictureResource(ApiHandler):
         if not picture:
             picture = Picture()
             picture.encode_name(raw_picture, name, ext)
-            picture.encode_source()
+            picture.encode_source(raw_picture)
             picture.caption = self.request.get('caption')
             picture.save()
             self.success_response(201, API_PICTURE_CREATED, picture.filename())         
@@ -227,14 +229,16 @@ class PictureResource(ApiHandler):
         """
         Update an existing picture.
         """
-        if not self.validate_uploaded_picture():
+        raw_picture = self.request.POST['picture']
+        
+        if not self.validate_uploaded_picture(raw_picture):
             return
             
         picture = Picture.find(name, ext)
         if picture:
             picture = Picture()
             picture.encode_name(raw_picture, name, ext)
-            picture.encode_source()
+            picture.encode_source(raw_picture)
             picture.caption = self.request.get('caption')
             picture.save()
             self.success_response(201, API_PICTURE_UPDATED, picture.filename())
@@ -302,12 +306,14 @@ class PicturesCollection(ApiHandler):
         """
         Handle direct post to picture collection
         """
-        if not self.accept_picture_request():
-            return False
+        raw_picture = self.request.POST['picture']
+        
+        if not self.check_uploaded_picture(raw_picture):
+            return
         
         picture = Picture()
-        picture.encode_name(self.request.POST['picture'])
-        picture.encode_source(self.request.POST['picture'])
+        picture.encode_name(raw_picture)
+        picture.encode_source(raw_picture)
         picture.caption = self.request.get('caption')
         
         if not picture.save():
