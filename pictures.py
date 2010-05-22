@@ -109,7 +109,8 @@ class Picture(db.Model):
         """
         return str(self.name) + '.' + str(self.ext)
 
-    def find_list(self):
+    @classmethod
+    def to_list(self):
         """
         Returns a dictionary of all the pictures
         """
@@ -292,7 +293,7 @@ class PicturesCollection(ApiHandler):
         """
         Returns the full index of images
         """
-        index = Picture.find_list()
+        index = Picture.to_list()
         
         self.response.headers['Content-Type'] = 'text/json'
         simplejson.dump(index, self.response.out)
