@@ -48,27 +48,39 @@ class TestPicturesService(unittest.TestCase):
         response, content = http.request(TEST_HOST + '/picture/test.jpg', 'POST', params)
         self.assertEquals(400, response.status)
     
-    def testPostToPictureResource(self):
+    def testAddAndRemovePictureResource(self):
         data, headers = multipart_encode({'picture': open('assets/disco-boogie.jpg', 'rb'), 'api_key': API_KEY, 'caption': 'a caption...'})
-        request = urllib2.Request(TEST_HOST + '/picture/' + self.getRandomFilename(), data, headers)
+        request = urllib2.Request(TEST_HOST + '/picture/my-picture.jpg', data, headers)
         try:
             response = urllib2.urlopen(request)
         except urllib2.HTTPError, e:
             self.assertEquals(201, e.code)
             
-    def testPostToPictureCollection(self):
+        http = httplib2.Http()
+        response, content = http.request(TEST_HOST + '/picture/my-picture.jpg', 'GET')
+        self.assertEquals(200, response.status)
+        
+        params = urllib.urlencode({'api_key': API_KEY})
+        response, content = http.request(TEST_HOST + '/picture/my-picture.jpg?' + params, 'DELETE')
+        self.assertEquals(201, response.status)
+            
+    def testAddAndRemoveFromPictureCollection(self):
         data, headers = multipart_encode({'picture': open('assets/disco-boogie.jpg', 'rb'), 'api_key': API_KEY, 'caption': 'a caption...'})
+        
         request = urllib2.Request(TEST_HOST + '/pictures', data, headers)
         try:
             response = urllib2.urlopen(request)
         except urllib2.HTTPError, e:
-            self.assertEquals(201, e.code)        
-
-    def testDeletePictureResource(self):
+            self.assertEquals(201, e.code)
+        
         http = httplib2.Http()
+        response, content = http.request(TEST_HOST + '/picture/disco-boogie.jpg', 'GET')
+        self.assertEquals(200, response.status)
+        
         params = urllib.urlencode({'api_key': API_KEY})
         response, content = http.request(TEST_HOST + '/picture/disco-boogie.jpg?' + params, 'DELETE')
-        self.assertEquals(201, response.status)        
+        self.assertEquals(201, response.status)
+      
         
 if __name__ == "__main__":
     unittest.main()
