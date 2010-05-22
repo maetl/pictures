@@ -69,12 +69,12 @@ class Picture(db.Model):
         
         return query.get()
     
-    def encode_name(self, raw, name=False, ext=False):
+    def encode_name(self, raw_picture, name=False, ext=False):
         """
         Encodes filename into URI friendly format.
         """
         if not name:
-            filename_part = raw.filename.split('.')
+            filename_part = raw_picture.filename.split('.')
             filename_part.pop()
             name = ''.join(filename_part)
         
@@ -82,19 +82,21 @@ class Picture(db.Model):
         self.name = encoded_name
             
         if not ext:
-            ext = raw.type.split('/')[1].replace('jpeg', 'jpg')
+            ext = raw_picture.type.split('/')[1].replace('jpeg', 'jpg')
         
         self.ext = ext
     
-    def encode_source(self, raw):
+    def encode(self, raw_picture, name=False, ext=False):
         """
         Wraps the creation of resized pictures from uploaded data
         """
-        self.mime_type = raw.type
-        self.source = db.Blob(raw.value)
+        self.encode_name(raw_picture, name, ext)
         
-        self.thumb = pictures.resize(raw.value, 120, 90)
-        self.default = pictures.resize(raw.value, 360)
+        self.mime_type = raw_picture.type
+        self.source = db.Blob(raw_picture.value)
+        
+        self.thumb = images.resize(raw_picture.value, 120, 90)
+        self.default = images.resize(raw_picture.value, 360)
     
     def save(self):
         """
@@ -147,7 +149,7 @@ class ApiHandler(webapp.RequestHandler):
         """
         self.response.set_status(status_code)
         self.response.headers['Content-Type'] = 'text/json'
-        simplejson.dump({'success': { 'message': message, 'resource': name } }, self.response.out)
+        simplejson.dump({'success': { 'message': message, 'resource': '/picture/' + name } }, self.response.out)
     
     def error_response(self, status_code, message):
         """
@@ -157,13 +159,13 @@ class ApiHandler(webapp.RequestHandler):
         self.response.headers['Content-Type'] = 'text/json'
         simplejson.dump({'error': { 'status': status_code, 'message': message } }, self.response.out)
     
-    def check_picture_type(self, raw_picture):
+    def check_picture_type(self, picture):
         """
         Return true if the uploaded 
         """
-        return raw_picture.type in ['image/jpeg', 'image/png', 'image/gif']
+        return picture.type in ['image/jpeg', 'image/png', 'image/gif']
     
-    def check_uploaded_picture(self, raw_picture):
+    def check_uploaded_picture(self):
         """
         Generic handler for processing picture uploads
         """
@@ -171,11 +173,11 @@ class ApiHandler(webapp.RequestHandler):
             self.error_response(401, API_ERROR_UNAUTHORIZED)
             return False
         
-        if not raw_picture:
+        if not self.request.get('picture'):
             self.error_response(400, API_ERROR_MISSING)
             return False
         
-        if not self.check_picture_type(raw_picture):
+        if not self.check_picture_type(self.request.POST['picture']):
             self.error_response(400, API_ERROR_INVALID)
             return False
             
@@ -208,17 +210,14 @@ class PictureResource(ApiHandler):
         """
         Handle resource based picture creation to /pictures/{name}.{ext}
         """
-        raw_picture = self.request.POST['picture']
-        
-        if not self.check_uploaded_picture(raw_picture):
+        if not self.check_uploaded_picture():
             return
         
         picture = Picture.find(name, ext)
         
         if not picture:
             picture = Picture()
-            picture.encode_name(raw_picture, name, ext)
-            picture.encode_source(raw_picture)
+            picture.encode(self.request.POST['picture'], name, ext)
             picture.caption = self.request.get('caption')
             picture.save()
             self.success_response(201, API_PICTURE_CREATED, picture.filename())         
@@ -237,8 +236,7 @@ class PictureResource(ApiHandler):
         picture = Picture.find(name, ext)
         if picture:
             picture = Picture()
-            picture.encode_name(raw_picture, name, ext)
-            picture.encode_source(raw_picture)
+            picture.encode(raw_picture, name, ext)
             picture.caption = self.request.get('caption')
             picture.save()
             self.success_response(201, API_PICTURE_UPDATED, picture.filename())
