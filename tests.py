@@ -48,7 +48,7 @@ class TestPicturesService(unittest.TestCase):
         response, content = http.request(TEST_HOST + '/picture/test.jpg', 'POST', params)
         self.assertEquals(400, response.status)
     
-    def testAddAndRemovePictureResource(self):
+    def testPostPutAndDeletePictureResource(self):
         data, headers = multipart_encode({'picture': open('assets/disco-boogie.jpg', 'rb'), 'api_key': API_KEY, 'caption': 'a caption...'})
         request = urllib2.Request(TEST_HOST + '/picture/my-picture.jpg', data, headers)
         try:
@@ -64,7 +64,7 @@ class TestPicturesService(unittest.TestCase):
         response, content = http.request(TEST_HOST + '/picture/my-picture.jpg?' + params, 'DELETE')
         self.assertEquals(201, response.status)
             
-    def testAddAndRemoveFromPictureCollection(self):
+    def testPostAndDeleteFromPictureCollection(self):
         data, headers = multipart_encode({'picture': open('assets/disco-boogie.jpg', 'rb'), 'api_key': API_KEY, 'caption': 'a caption...'})
         
         request = urllib2.Request(TEST_HOST + '/pictures', data, headers)
