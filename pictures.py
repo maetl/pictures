@@ -18,10 +18,8 @@
 #
 #     http://code.google.com/appengine/terms.html
 #
-# For more details, see http://maetl.net/forthcoming-blog-post
+# For more details, see http://maetl.net/pictures-api
 #
-
-__author__ = "Mark Rickerby"
 
 #?replace-this=
 API_KEY = '8asYFIAd+sfd!ggsdfgASDU#F*S'
